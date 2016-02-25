@@ -9,14 +9,17 @@ public class Ant implements Runnable{
 	int x,y, xDirection, yDirection;
 	boolean resting = false;
 	boolean shouldSetRandDir = true;
-	Rectangle Ant;
+	Rectangle ant;
 	Rectangle target = new Rectangle(50,50,15,15);
+	int status = 0;
 
-	public Ant(int x, int y){
+	public Ant(int x, int y, int status){
 		this.x = x;
 		this.y = y;
+		this.status = status;
+		System.out.println(status);
 		//create 'Ant'
-		Ant = new Rectangle(this.x, this.y, 5, 5);
+		ant = new Rectangle(this.x, this.y, 5, 5);
 	}
 		public int chooseRandomDirection(){
 			Random r = new Random();
@@ -39,50 +42,114 @@ public class Ant implements Runnable{
 	
 	public void draw(Graphics g){
 		g.setColor(Color.BLACK);
-		g.fillRect(Ant.x, Ant.y, Ant.width, Ant.height);
-		g.setColor(Color.PINK);
-		g.fillRect(target.x,target.y,target.width,target.height);
+		g.fillRect(ant.x, ant.y, ant.width, ant.height);
 	}
 	
 	public void collisionWithEnemy(){
-		if(Ant.intersects(target)){
-			Ant.x = Ant.x;
-			Ant.y = Ant.y;
+		if(ant.intersects(target)){
+			ant.x = ant.x;
+			ant.y = ant.y;
 		}	
 	}
 	
 	public void move(){
 		//collision();
-		Ant.x += xDirection;
-		Ant.y += yDirection;
+		ant.x += xDirection;
+		ant.y += yDirection;
 		
 		//Bounce Ant when edge detected
-		if(Ant.x <= 0){
+		if(ant.x <= 0){
 			setXDirection(+1);
 		}	
-		if(Ant.x >= 690){
+		if(ant.x >= 690){
 			setXDirection(-1);
 		}
-		if(Ant.y <= 10)
+		if(ant.y <= 10)
 			setYDirection(+1);
-		if(Ant.y >= 590)
+		if(ant.y >= 590)
 			setYDirection(-1);
 	}
 	
 	public void findPathToTarget(){
-		if(Ant.x < target.x){
+		if(ant.x < target.x){
 			setXDirection(1);
 		}
-		if(Ant.x > target.x){
+		if(ant.x > target.x){
 			setXDirection(-1);
 		}
-		if(Ant.y < target.y){
+		if(ant.y < target.y){
 			setYDirection(1);
 		}
-		if(Ant.y > target.y){
+		if(ant.y > target.y){
 			setYDirection(-1);
 		}
 	}
+	
+	public void antBorder(Ant a){
+		if (ant.intersects(a.ant) && ant.x > a.ant.x){
+			ant.x += 10;
+		}
+		
+		if (ant.intersects(a.ant) && ant.x < a.ant.x){
+			ant.x -= 10;
+		}
+		
+		if (ant.intersects(a.ant) && ant.y > a.ant.y){
+			ant.y += 10;
+		}
+		
+		if (ant.intersects(a.ant) && ant.y < a.ant.y){
+			ant.y -= 10;
+		}
+	}
+	
+	public void findPathToAnt(Ant a){
+		if(ant.x < a.x){
+			setXDirection(1);
+		}
+		if(ant.x > a.x){
+			setXDirection(-1);
+		}
+		if(ant.y < a.y){
+			setYDirection(1);
+		}
+		if(ant.y > a.y){
+			setYDirection(-1);
+		}
+	}
+	
+	/*public void moveRandom(){
+		try{
+			while(true){
+				if(!resting){
+					if(shouldSetRandDir){
+					setXDirection(chooseRandomDirection());
+					setYDirection(chooseRandomDirection());
+					shouldSetRandDir = false;
+					}
+					long start = System.currentTimeMillis();
+					long end = start + 1 * 1000;
+					while(System.currentTimeMillis() < end){
+							move();
+							System.out.println(ant.x + " " + ant.y);
+							//System.out.println((Math.sqrt(Math.pow((target.x - Ant.x), 2) + 
+								//	Math.pow((target.y - Ant.y), 2))));
+						Thread.sleep(10);
+					}
+					resting = true;
+				}					
+				else{
+					
+					shouldSetRandDir = true;
+					resting = false;
+				}
+			}
+			
+		}
+		catch(Exception ex){
+			System.err.println(ex.getMessage());
+		}
+	}*/
 	
 	public void moveRandom(){
 		try{
@@ -96,26 +163,27 @@ public class Ant implements Runnable{
 					long start = System.currentTimeMillis();
 					long end = start + 1 * 1000;
 					while(System.currentTimeMillis() < end){
-						if((Math.sqrt(Math.pow((target.x - Ant.x), 2) + 
-								Math.pow((target.y - Ant.y), 2))) < 100){
+						if((Math.sqrt(Math.pow((target.x - ant.x), 2) + 
+								Math.pow((target.y - ant.y), 2))) < 100 || status == 1){
+							status = 1;
 							findPathToTarget();
 							collisionWithEnemy();
 							move();
-							System.out.println((Math.sqrt(Math.pow((target.x - Ant.x), 2) + 
-									Math.pow((target.y - Ant.y), 2))));
+							System.out.println(ant.x + " " + ant.y);
 						}
 						else{
 							collisionWithEnemy();
 							move();
-							System.out.println((Math.sqrt(Math.pow((target.x - Ant.x), 2) + 
-									Math.pow((target.y - Ant.y), 2))));
-						}
-						Thread.sleep(8);
+							System.out.println(ant.x + " " + ant.y);
+							//System.out.println((Math.sqrt(Math.pow((target.x - Ant.x), 2) + 
+								//	Math.pow((target.y - Ant.y), 2))));
+						}	
+						Thread.sleep(10);
 					}
 					resting = true;
 				}					
 				else{
-					Thread.sleep(1000); //how long will object rest for
+					
 					shouldSetRandDir = true;
 					resting = false;
 				}
@@ -131,7 +199,7 @@ public class Ant implements Runnable{
 		try{
 			while(true){
 				moveRandom();
-				Thread.sleep(1);
+				Thread.sleep(4);
 			}
 		} catch(Exception e){ System.err.println(e.getMessage());}
 	}
