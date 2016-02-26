@@ -24,7 +24,9 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 	int resting = 0;
 	
 	//the player's ship
-	Ant ship = new Ant();
+	Ant ant = new Ant();
+	
+	Enemy ship = new Enemy();
 	
 	//create the identity transform(0,0)
 	AffineTransform identity = new AffineTransform();
@@ -39,8 +41,11 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 		g2d = backbuffer.createGraphics();
 		
 		//set up the ship
-		ship.setX(320);
-		ship.setY(240);
+		ant.setX(320);
+		ant.setY(240);
+		
+		ship.setX(60);
+		ship.setY(60);
 		
 		//start the user input listener
 		addKeyListener(this);
@@ -57,12 +62,13 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 		
 		//print some status information
 		g2d.setColor(Color.WHITE);
-		g2d.drawString("Ship: " + Math.round(ship.getX()) + "," + Math.round(ship.getY()), 5, 10);
-		g2d.drawString("Move angle: " + Math.round(ship.getMoveAngle()) + 90,5,25);
-		g2d.drawString("Face angle: " + Math.round(ship.getFaceAngle()), 5, 40);
+		g2d.drawString("Ship: " + Math.round(ant.getX()) + "," + Math.round(ant.getY()), 5, 10);
+		g2d.drawString("Move angle: " + Math.round(ant.getMoveAngle()) + 90,5,25);
+		g2d.drawString("Face angle: " + Math.round(ant.getFaceAngle()), 5, 40);
 		
 		//draw the game graphics
 		drawShip();
+		drawEnemy();
 		
 		//repaint the applet window
 		paint(g);
@@ -71,9 +77,17 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 	//drawShip called by applet update event
 	public void drawShip(){
 		g2d.setTransform(identity);
+		g2d.translate(ant.getX(),ant.getY());
+		g2d.rotate(Math.toRadians(ant.getFaceAngle()));
+		g2d.setColor(Color.RED);
+		g2d.fill(ant.getShape());
+	}
+	
+	public void drawEnemy(){
+		g2d.setTransform(identity);
 		g2d.translate(ship.getX(),ship.getY());
 		g2d.rotate(Math.toRadians(ship.getFaceAngle()));
-		g2d.setColor(Color.RED);
+		g2d.setColor(Color.PINK);
 		g2d.fill(ship.getShape());
 	}
 
@@ -100,7 +114,7 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 					//update the game loop
 					gameUpdate();
 					//target framerate is 50 fps
-					Thread.sleep(10);
+					Thread.sleep(100);
 			}
 			catch(InterruptedException e){
 				e.printStackTrace();
@@ -116,7 +130,8 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 	//move and animate the objects in the game
 	private void gameUpdate(){
 		
-		updateShip();
+		updateAnt();
+		updateEnemy();
 		
 		
 		//checkCollisions();
@@ -124,56 +139,78 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 	
 	public void changeDirection(){
 			int randomFaceAngle = rand.nextInt((360 - 0) + 1) + 0;
-			ship.setFaceAngle(randomFaceAngle);
+			ant.setFaceAngle(randomFaceAngle);
 	}
 	
 	//Update the ship position based on velocity
-	public void updateShip(){
+	public void updateAnt(){
 		resting++;
 		//in place of pressing up to move the ship
-		ship.setMoveAngle(ship.getFaceAngle() - 90);
-		ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
-		ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
+		ant.setMoveAngle(ant.getFaceAngle() - 90);
+		ant.setVelX(calcAngleMoveX(ant.getMoveAngle()));
+		ant.setVelY(calcAngleMoveY(ant.getMoveAngle()));
 		
 		//used in reversing the direction the ship is facing
-		double faceAngle = ship.getFaceAngle();
+		double faceAngle = ant.getFaceAngle();
 		
 		if(resting == 5){//how many steps before ant changes the way it is facing.
 			resting = 0;
 			changeDirection();
 		}
 		//update ship X's position, distance the ant moves in one step
-		ship.incX(ship.getVelX() * 5);
-		System.out.println(ship.getVelX());
+		ant.incX(ant.getVelX() * 5);
+		System.out.println(ant.getVelX());
 		
 		//collide with left/right edge
-		if(ship.getX() < - 5){
-			ship.setX(5);
+		if(ant.getX() < - 5){
+			ant.setX(5);
 			checkFaceAngle(faceAngle);	
 			bounceOffEdge(faceAngle);
 		}
-		else if(ship.getX() > 640 + 5){
-			ship.setX(640 - 5);
+		else if(ant.getX() > 640 + 5){
+			ant.setX(640 - 5);
 			checkFaceAngle(faceAngle);	
 			bounceOffEdge(faceAngle);
 		}		
 		//update ship Y's position
-		ship.incY(ship.getVelY() * 5);
-		System.out.println(ship.getVelY());
+		ant.incY(ant.getVelY() * 5);
+		System.out.println(ant.getVelY());
 		
 		
 		//wrap around top/bottom
-		if(ship.getY() < -5){
-			ship.setY(5);
+		if(ant.getY() < -5){
+			ant.setY(5);
 			checkFaceAngle(faceAngle);	
 			bounceOffEdge(faceAngle);
 		}	
-		else if(ship.getY() > 480 + 5){
-			ship.setY(480 - 5);
+		else if(ant.getY() > 480 + 5){
+			ant.setY(480 - 5);
 			checkFaceAngle(faceAngle);	
 			bounceOffEdge(faceAngle);
 		}
 	}
+	
+	//Update the ship position based on velocity
+		public void updateEnemy(){
+			//update ship X's position
+			ship.incX(ship.getVelX() * 5);
+			
+			//wrap around left/right
+			if(ship.getX() < - 5)
+				ship.setX(5);
+			else if(ship.getX() > 640 + 5)
+				ship.setX(640 - 5);
+			//update ship Y's position
+			ship.incY(ship.getVelY() * 5);
+			
+			//wrap around top/bottom
+			if(ship.getY() < -5)
+				ship.setY(5);
+			else if(ship.getY() > 480 + 5)
+				ship.setY(480 - 5);
+			
+		}
+		
 	//keeps face angle in range 0-360
 	public void checkFaceAngle(double faceAngle){
 		if(faceAngle > 180){
@@ -185,36 +222,67 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 	}
 	
 	public void bounceOffEdge(double faceAngle){
-		ship.setFaceAngle(faceAngle);
-		ship.setMoveAngle(ship.getFaceAngle() - 90);
-		ship.setVelX(calcAngleMoveX(ship.getMoveAngle()) * 0.2);
-		ship.setVelY(calcAngleMoveY(ship.getMoveAngle()) * 0.2);
-	}
-	//key listener events
-	public void keyReleased(KeyEvent k){}
-	public void keyTyped(KeyEvent k){}
-	public void keyPressed(KeyEvent k){
-		int keyCode = k.getKeyCode();
-		switch(keyCode){
-			case KeyEvent.VK_LEFT:
-				//left arrow rotates ship left 5 degrees
-				ship.incFaceAngle(-12);
-				if(ship.getFaceAngle() < 0) ship.setFaceAngle(360 - 12);
-				break;
-			case KeyEvent.VK_RIGHT:
-				//right arrow rotates ship 5 degrees
-				ship.incFaceAngle(12);
-				if(ship.getFaceAngle() > 360) ship.setFaceAngle(12);
-				break;
-			case KeyEvent.VK_UP:
-				//up arrow adds thrust to ship(1/10 normal speed)
-				ship.setMoveAngle(ship.getFaceAngle() - 90);
-				ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
-				ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
-				break;
-		}
+		ant.setFaceAngle(faceAngle);
+		ant.setMoveAngle(ant.getFaceAngle() - 90);
+		ant.setVelX(calcAngleMoveX(ant.getMoveAngle()) * 0.2);
+		ant.setVelY(calcAngleMoveY(ant.getMoveAngle()) * 0.2);
 	}
 	
+	//key listener events
+		public void keyReleased(KeyEvent e){
+				int keyCode = e.getKeyCode();
+				if(keyCode == e.VK_LEFT){
+					ship.setVelX(0);
+					ship.setVelY(0);
+				}
+				if(keyCode == e.VK_RIGHT){
+					ship.setVelX(0);
+					ship.setVelY(0);
+				}
+				if(keyCode == e.VK_UP){
+					ship.setVelX(0);
+					ship.setVelY(0);
+				}
+				if(keyCode == e.VK_DOWN){
+					ship.setVelX(0);
+					ship.setVelY(0);
+				}
+			
+		}
+		public void keyTyped(KeyEvent k){}
+		public void keyPressed(KeyEvent k){
+			int keyCode = k.getKeyCode();
+			switch(keyCode){
+				case KeyEvent.VK_LEFT:
+					//left arrow rotates ship left 5 degrees
+					ship.setFaceAngle(270);
+					ship.setMoveAngle(ship.getFaceAngle() - 90);
+					ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
+					ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
+					break;
+				case KeyEvent.VK_RIGHT:
+					//right arrow rotates ship 5 degrees
+					ship.setFaceAngle(90);
+					ship.setMoveAngle(ship.getFaceAngle() - 90);
+					ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
+					ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
+					break;
+				case KeyEvent.VK_UP:
+					//up arrow adds thrust to ship(1/10 normal speed)
+					ship.setFaceAngle(0);
+					ship.setMoveAngle(ship.getFaceAngle() - 90);
+					ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
+					ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
+					break;
+				case KeyEvent.VK_DOWN:
+					//up arrow adds thrust to ship(1/10 normal speed)
+					ship.setFaceAngle(180);
+					ship.setMoveAngle(ship.getFaceAngle() - 90);
+					ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
+					ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
+					break;
+			}
+		}
 	
 	
 	//calculate X movement value based on direction angle
