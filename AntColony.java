@@ -18,7 +18,9 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 	Graphics2D g2d;
 	
 	//toggle for drawing bounding boxes
-	boolean showBounds = false;
+	boolean showBounds = true;
+	
+	private boolean behind = false;
 	
 	//makes the ant rest
 	int resting = 0;
@@ -27,7 +29,7 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 	int ANTS = 100;
 	Ant [] ant = new Ant[ANTS];
 	
-	Enemy ship = new Enemy();
+	Enemy enemy = new Enemy();
 	
 	//create the identity transform(0,0)
 	AffineTransform identity = new AffineTransform();
@@ -49,8 +51,8 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 			changeDirection(ant[i]);
 		}
 		
-		ship.setX(60);
-		ship.setY(60);
+		enemy.setX(60);
+		enemy.setY(60);
 		
 		//start the user input listener
 		addKeyListener(this);
@@ -72,11 +74,25 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 		//g2d.drawString("Face angle: " + Math.round(ant.getFaceAngle()), 5, 40);
 		
 		//draw the game graphics
+		drawBounds();
 		drawShip();
 		drawEnemy();
 		
 		//repaint the applet window
 		paint(g);
+	}
+	
+	public void drawBounds(){
+		
+		if(showBounds){
+			g2d.setColor(Color.WHITE);
+			g2d.draw(enemy.getBounds());
+			for(int i = 0; i < ANTS; i++){
+				//g2d.draw(ant[i].getRadius());
+				g2d.draw(ant[i].getDangerPheromone());
+			}
+		}
+		
 	}
 	
 	//drawShip called by applet update event
@@ -87,15 +103,16 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 			g2d.rotate(Math.toRadians(ant[i].getFaceAngle()));
 			g2d.setColor(Color.RED);
 			g2d.fill(ant[i].getShape());
+			
 		}
 	}
 	
 	public void drawEnemy(){
 		g2d.setTransform(identity);
-		g2d.translate(ship.getX(),ship.getY());
-		g2d.rotate(Math.toRadians(ship.getFaceAngle()));
+		g2d.translate(enemy.getX(),enemy.getY());
+		g2d.rotate(Math.toRadians(enemy.getFaceAngle()));
 		g2d.setColor(Color.PINK);
-		g2d.fill(ship.getShape());
+		g2d.fill(enemy.getShape());
 	}
 
 	//applet window repaint event -- draw the back buffer
@@ -136,18 +153,30 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 	}
 	//move and animate the objects in the game
 	private void gameUpdate(){
-		
+		checkCollisions();
 		updateAnt();
 		updateEnemy();
 		
-		
-		//checkCollisions();
 	}
 	
 	public void changeDirection(Ant ant){
 			int randomFaceAngle = rand.nextInt((360 - 0) + 1) + 0;
 			ant.setFaceAngle(randomFaceAngle);
 	}
+	
+	public double getDistance(Enemy e, Ant a){
+		return (Math.sqrt(Math.pow((e.getX() - a.getX()), 2) + 
+				Math.pow((e.getY() - a.getY()), 2)));
+	}
+	
+	/*public void isBehind(Ant a, Enemy e){
+		double distance = Math.sqrt(Math.pow((e.getX() - a.getX()), 2) + 
+				Math.pow((e.getY() - e.getY()), 2));
+		if(a.getY() < e.getY() && distance < 30){
+			behind = true;
+		}
+		
+	}*/
 	
 	//Update the ship position based on velocity
 	public void updateAnt(){
@@ -163,8 +192,18 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 			double faceAngle = ant[i].getFaceAngle();
 		
 			if(resting == 5){//how many steps before ant changes the way it is facing.
-				System.out.println(resting);
-				changeDirection(ant[i]);
+				//System.out.println(resting);
+				if(getDistance(enemy, ant[i]) > 30 && ant[i].getBeenChecked() == true){
+					ant[i].setBeenChecked(false);
+					System.out.println(getDistance(enemy, ant[i]));
+					System.out.println("unchecked");
+				}
+				
+				if(ant[i].getBeenChecked() == false){
+					changeDirection(ant[i]);
+				}	
+				//System.out.println(faceAngle);
+				//ant[i].checkFaceAngle();
 				if(i == ANTS - 1){
 					resting = 0;
 				}
@@ -176,12 +215,12 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 			//collide with left/right edge
 			if(ant[i].getX() < - 5){
 				ant[i].setX(5);
-				checkFaceAngle(faceAngle);	
+				//ant[i].checkFaceAngle();	
 				bounceOffEdge(faceAngle, ant[i]);
 			}
 			else if(ant[i].getX() > 640 + 5){
 				ant[i].setX(640 - 5);
-				checkFaceAngle(faceAngle);	
+				//ant[i].checkFaceAngle();	
 				bounceOffEdge(faceAngle, ant[i]);
 			}		
 			//update ship Y's position
@@ -192,12 +231,12 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 			//wrap around top/bottom
 			if(ant[i].getY() < -5){
 				ant[i].setY(5);
-				checkFaceAngle(faceAngle);	
+				//ant[i].checkFaceAngle();	
 				bounceOffEdge(faceAngle,ant[i]);
 			}	
 			else if(ant[i].getY() > 480 + 5){
 				ant[i].setY(480 - 5);
-				checkFaceAngle(faceAngle);	
+				//ant[i].checkFaceAngle();	
 				bounceOffEdge(faceAngle,ant[i]);
 			}
 		}
@@ -206,59 +245,77 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 	//Update the ship position based on velocity
 		public void updateEnemy(){
 			//update ship X's position
-			ship.incX(ship.getVelX() * 5);
+			enemy.incX(enemy.getVelX() * 5);
 			
 			//wrap around left/right
-			if(ship.getX() < - 5)
-				ship.setX(5);
-			else if(ship.getX() > 640 + 5)
-				ship.setX(640 - 5);
+			if(enemy.getX() < - 5)
+				enemy.setX(5);
+			else if(enemy.getX() > 640 + 5)
+				enemy.setX(640 - 5);
 			//update ship Y's position
-			ship.incY(ship.getVelY() * 5);
+			enemy.incY(enemy.getVelY() * 3);
 			
 			//wrap around top/bottom
-			if(ship.getY() < -5)
-				ship.setY(5);
-			else if(ship.getY() > 480 + 5)
-				ship.setY(480 - 5);
+			if(enemy.getY() < -5)
+				enemy.setY(5);
+			else if(enemy.getY() > 480 + 5)
+				enemy.setY(480 - 5);
 			
 		}
 		
 	//keeps face angle in range 0-360
-	public void checkFaceAngle(double faceAngle){
-		if(faceAngle > 180){
-			faceAngle -= 180;
-		}
-		else{
-			faceAngle += 180;
-		}
-	}
+	//public void checkFaceAngle(double faceAngle){
+	//}
 	
 	public void bounceOffEdge(double faceAngle, Ant ant){
 		ant.setFaceAngle(faceAngle);
-		ant.setMoveAngle(ant.getFaceAngle() - 90);
-		ant.setVelX(calcAngleMoveX(ant.getMoveAngle()) * 0.2);
-		ant.setVelY(calcAngleMoveY(ant.getMoveAngle()) * 0.2);
 	}
 	
+	public void checkCollisions(){
+		//iterate through the asteroids array
+		for(int m = 0; m < ANTS; m++){
+			//perform the collision test
+			if(ant[m].getRadius().intersects(enemy.getBounds()) && ant[m].getBeenChecked() == false){
+						System.out.println("checked");
+						ant[m].checkFaceAngle();
+						//ant[m].setMoveAngle(ant[m].getFaceAngle() - 90);
+						//ant[m].setVelX(calcAngleMoveX(ant[m].getMoveAngle()));
+						//ant[m].setVelY(calcAngleMoveY(ant[m].getMoveAngle()));
+						ant[m].setBeenChecked(true);
+				}	
+				
+				
+			}
+				
+				/*check for collision with ship
+				if(ast[m].getBounds().intersects(ship.getBounds())){
+					ast[m].setAlive(false);
+					ship.setX(320);
+					ship.setY(240);
+					ship.setFaceAngle(0);
+					ship.setVelX(0);
+					ship.setVelY(0);
+					continue;
+				}*/
+	}
 	//key listener events
 		public void keyReleased(KeyEvent e){
 				int keyCode = e.getKeyCode();
 				if(keyCode == e.VK_LEFT){
-					ship.setVelX(0);
-					ship.setVelY(0);
+					enemy.setVelX(0);
+					enemy.setVelY(0);
 				}
 				if(keyCode == e.VK_RIGHT){
-					ship.setVelX(0);
-					ship.setVelY(0);
+					enemy.setVelX(0);
+					enemy.setVelY(0);
 				}
 				if(keyCode == e.VK_UP){
-					ship.setVelX(0);
-					ship.setVelY(0);
+					enemy.setVelX(0);
+					enemy.setVelY(0);
 				}
 				if(keyCode == e.VK_DOWN){
-					ship.setVelX(0);
-					ship.setVelY(0);
+					enemy.setVelX(0);
+					enemy.setVelY(0);
 				}
 			
 		}
@@ -268,31 +325,31 @@ public class AntColony extends Applet implements Runnable, KeyListener {
 			switch(keyCode){
 				case KeyEvent.VK_LEFT:
 					//left arrow rotates ship left 5 degrees
-					ship.setFaceAngle(270);
-					ship.setMoveAngle(ship.getFaceAngle() - 90);
-					ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
-					ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
+					enemy.setFaceAngle(270);
+					enemy.setMoveAngle(enemy.getFaceAngle() - 90);
+					enemy.setVelX(calcAngleMoveX(enemy.getMoveAngle()));
+					enemy.setVelY(calcAngleMoveY(enemy.getMoveAngle()));
 					break;
 				case KeyEvent.VK_RIGHT:
 					//right arrow rotates ship 5 degrees
-					ship.setFaceAngle(90);
-					ship.setMoveAngle(ship.getFaceAngle() - 90);
-					ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
-					ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
+					enemy.setFaceAngle(90);
+					enemy.setMoveAngle(enemy.getFaceAngle() - 90);
+					enemy.setVelX(calcAngleMoveX(enemy.getMoveAngle()));
+					enemy.setVelY(calcAngleMoveY(enemy.getMoveAngle()));
 					break;
 				case KeyEvent.VK_UP:
 					//up arrow adds thrust to ship(1/10 normal speed)
-					ship.setFaceAngle(0);
-					ship.setMoveAngle(ship.getFaceAngle() - 90);
-					ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
-					ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
+					enemy.setFaceAngle(0);
+					enemy.setMoveAngle(enemy.getFaceAngle() - 90);
+					enemy.setVelX(calcAngleMoveX(enemy.getMoveAngle()));
+					enemy.setVelY(calcAngleMoveY(enemy.getMoveAngle()));
 					break;
 				case KeyEvent.VK_DOWN:
 					//up arrow adds thrust to ship(1/10 normal speed)
-					ship.setFaceAngle(180);
-					ship.setMoveAngle(ship.getFaceAngle() - 90);
-					ship.setVelX(calcAngleMoveX(ship.getMoveAngle()));
-					ship.setVelY(calcAngleMoveY(ship.getMoveAngle()));
+					enemy.setFaceAngle(180);
+					enemy.setMoveAngle(enemy.getFaceAngle() - 90);
+					enemy.setVelX(calcAngleMoveX(enemy.getMoveAngle()));
+					enemy.setVelY(calcAngleMoveY(enemy.getMoveAngle()));
 					break;
 			}
 		}
