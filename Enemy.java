@@ -9,7 +9,7 @@ public class Enemy extends BaseVectorShape{
 	//bounding rectangle
 	public Rectangle getBounds(){
 		Rectangle r;
-		r = new Rectangle((int)getX() - 12,(int)getY() - 12, 23, 23);
+		r = new Rectangle((int)getX() - 12, (int)getY() - 12, 23,23);
 		return r;
 	}
 	Enemy(){

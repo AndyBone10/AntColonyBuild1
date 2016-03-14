@@ -1,2 +1,2 @@
-# AntColonyBuild1
-One wandering ant
+# VirtualAntColony
+3rd year project
